@@ -6,6 +6,8 @@ describe('NYTimes Cooking HomePage tests', function() {
   //define variables to generate two random numbers to keep email and password random. To be used later.
   var randomEmailNum = Math.floor(Math.random() * 100) + 1900;
   var randomPassNum = Math.floor(Math.random() * 899) + 100;
+  var randomArrSelector = Math.floor(Math.random() * 5);
+  var nameArr = ["passenger", "customer", "resident", "therapist", "traveler"];
   
   beforeEach(function() {
 	browser.ignoreSynchronization = true;
@@ -18,7 +20,8 @@ describe('NYTimes Cooking HomePage tests', function() {
 	//Sign up by entering email and password. Helps create random test customers.
     cookingpage.loginLink.click();
 	cookingpage.signUpLink.click();
-	cookingpage.signUpInputs.get(0).sendKeys("reader" + randomEmailNum + "@gmail.com");
+	//Keeping the email random for tests. Please note that tests fail when NYT complains thats this is an invalid email.
+	cookingpage.signUpInputs.get(0).sendKeys(nameArr[randomArrSelector] + randomEmailNum + "@gmail.com");
 	cookingpage.signUpInputs.get(1).sendKeys("Str" + randomPassNum);
 	cookingpage.signUpInputs.get(2).sendKeys("Str" + randomPassNum);
 	cookingpage.createAccountButton.click();
@@ -41,7 +44,7 @@ describe('NYTimes Cooking HomePage tests', function() {
 	expect(cookingpage.homepageHdr.getText()).toBe("What to Cook This Week");
 	
 	//verify the user is signed in
-	expect(cookingpage.homePageActName.getText()).toBe("reader" + randomEmailNum);
+	expect(cookingpage.homePageActName.getText()).toBe(nameArr[randomArrSelector] + randomEmailNum);
 	
 	//verify the user can log out
 	cookingpage.subscribeLink.click();
@@ -52,7 +55,7 @@ describe('NYTimes Cooking HomePage tests', function() {
   it('should login the customer and verify he/she can save a recipe', function() {
 	//login
 	cookingpage.loginLink.click();
-	cookingpage.signUpInputs.get(0).sendKeys("reader" + randomEmailNum + "@gmail.com");
+	cookingpage.signUpInputs.get(0).sendKeys(nameArr[randomArrSelector] + randomEmailNum + "@gmail.com");
 	cookingpage.signUpInputs.get(1).sendKeys("Str" + randomPassNum);
 	cookingpage.loginButton.click();
 	browser.driver.sleep(1000);
@@ -89,10 +92,19 @@ describe('NYTimes Cooking HomePage tests', function() {
   it('should login the customer and verify that the API for unsaving a recipe works', function() {
 	//login
 	cookingpage.loginLink.click();
-	cookingpage.loginInputs.get(0).sendKeys("reader" + randomEmailNum + "@gmail.com");
+	cookingpage.loginInputs.get(0).sendKeys(nameArr[randomArrSelector] + randomEmailNum + "@gmail.com");
 	cookingpage.loginInputs.get(1).sendKeys("Str" + randomPassNum);
 	cookingpage.loginButton.click();
-	browser.driver.sleep(500);
+	browser.driver.sleep(1000);
+	//checking if secure login page appears. Note that tests will fail if capcha appears.
+	//However, on lower environments, capcha can be turned off so automation tests can run.
+	Promise.all([
+		cookingpage.secureLoginMsg.get(1).isPresent(),
+        ]).then(function(values){
+			cookingpage.secureLoginPassword.get(2).sendKeys("Str" + randomPassNum);
+			cookingpage.secureLoginButton.get(0).click();
+        });
+	browser.driver.sleep(1000);
 	
 	//Checking if the pop up appears.
 	cookingpage.continueToNytButton.isPresent().then(function(result) {
@@ -102,7 +114,7 @@ describe('NYTimes Cooking HomePage tests', function() {
         //do nothing
     }
 	});
-	
+	browser.driver.sleep(3000);
 	//Gather information needed for the API
 	browser.executeScript('arguments[0].scrollIntoView()',cookingpage.homepageHdr.getWebElement());
 	//getting the user id
@@ -126,13 +138,22 @@ describe('NYTimes Cooking HomePage tests', function() {
         browser.executeScript(getUserId),
         browser.executeScript(getUserAgent),
         ]).then(function(values){
-			commonUtils.deleteRecipe(values[0], values[1].name + '=' + values[1].value, values[2], values[3]);
+			callApi(values[0], values[1].name + '=' + values[1].value, values[2], values[3]);
         });
 	browser.driver.sleep(500);
-		
-	//Verify that the recipe is deleted.
-	expect(cookingpage.savedRecipesCount.get(2).getText()).toBe('0');
-	expect(cookingpage.savedRecipes.get(0).isPresent()).toBe(false);
+	//Call unSave API
+	function callApi(rId,nytS,uId,uAgent) {
+		commonutils.deleteRecipe(rId,nytS,uId,uAgent);
+    }
+
+	//Verify that the recipe is deleted. wait for recipe box to load
+	browser.wait(function() {
+        cookingpage.homePageActName.click();
+		return true;
+    }).then(function () {
+        expect(cookingpage.savedRecipesCount.get(1).getText()).toBe('0');
+		expect(cookingpage.savedRecipes.get(0).isPresent()).toBe(false);
+    });
 	
 	//log out the customer
 	cookingpage.subscribeLink.click();

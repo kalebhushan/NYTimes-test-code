@@ -35,6 +35,24 @@ cooking.prototype = Object.create({}, {
 		}
 	},
 	
+	secureLoginMsg: {
+		get:function() {
+			return element.all(by.css('.Form__formHolder___rRqS3 .Form__notification___28mi4'));
+		}
+	},
+	
+	secureLoginPassword: {
+		get:function() {
+			return element.all(by.css('.Input__inputBox___2Dkss'));
+		}
+	},
+	
+	secureLoginButton: {
+		get:function() {
+			return element.all(by.css('.Button__buttonBox___2xI4s.Button__primary___Zx1vy'));
+		}
+	},
+	
 	continueToNytButton: {
 		get:function() {
 			return element(by.css('.nytc---buttonstyles---redCTA'));
